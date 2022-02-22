@@ -1,0 +1,9 @@
+               Filter       Wavelength                 Flux  Flag  
+# --------------------  ---------------  -------------------  ----  
+#       GALEX/GALEX.FUV  1549.0192991969  1.2866125632829E-15    ok  
+   Astrosat/UVIT.F172M             1717  1.6921783294697E-15    ok  
+   Astrosat/UVIT.F169M             1608  1.6484657142437E-15    ok  
+   Astrosat/UVIT.F154W             1541  1.4068992763934E-15    ok  
+   Astrosat/UVIT.F148W             1481  1.3789797600609E-15    ok  
+  Astrosat/UVIT.F148Wa             1485  1.4055989772977E-15    ok  
+

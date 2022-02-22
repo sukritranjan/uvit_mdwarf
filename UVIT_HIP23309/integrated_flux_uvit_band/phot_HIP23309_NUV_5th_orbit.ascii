@@ -1,0 +1,10 @@
+                  Filter  Wavelength                 Flux    Flag  
+# -----------------------  ----------  -------------------  ------  
+#  Astrosat/UVIT.N279N_old                               -1  nopts2  
+      Astrosat/UVIT.N279N        2792  9.3498521591367E-15      ok  
+#  Astrosat/UVIT.N263M_old                               -1  nopts2  
+      Astrosat/UVIT.N263M        2632  5.3009298499876E-15      ok  
+#  Astrosat/UVIT.N245M_old                               -1  nopts2  
+      Astrosat/UVIT.N245M        2447  3.7096964288336E-15      ok  
+#  Astrosat/UVIT.N219M_old                               -1  nopts2  
+      Astrosat/UVIT.N219M        2196  1.4140436635851E-15      ok  
