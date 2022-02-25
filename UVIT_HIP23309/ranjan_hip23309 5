@@ -173,20 +173,26 @@ if compare_hst_uvit_hip23309_data:
         wavs_uvit_rebinned[ind]=(1.0/rebinfactor)*np.sum(HIP23309_FUV['lambda'].to_numpy()[(ind*rebinfactor):((ind+1)*rebinfactor)])
         flux_uvit_rebinned[ind]=(1.0/rebinfactor)*np.sum(HIP23309_FUV['flux'].to_numpy()[(ind*rebinfactor):((ind+1)*rebinfactor)])
         fluxerr_uvit_rebinned[ind]=(1.0/rebinfactor)*np.sqrt(np.sum(HIP23309_FUV['flux_err'].to_numpy()[(ind*rebinfactor):((ind+1)*rebinfactor)]**2.0))
-        
     
    ###Calculate "chi-square". Approximate HST data as perfect (no error)
-    uvit_flux_cut=HIP23309_FUV['flux'].to_numpy()[inds]
-    uvit_fluxerr_cut=HIP23309_FUV['flux_err'].to_numpy()[inds]
     chisquare=np.sum((hip23309_hst_smoothed_uvitbinned-HIP23309_FUV['flux'].to_numpy()[inds])**2.0/(HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0)
     dof=len(hip23309_hst_smoothed_uvitbinned)
     rchisquare=chisquare/dof
     
+    breakpoint()
+    
     print('"Chi-square": {0:3.1f}, dof:{1:3f}"reduced "chi square"": {2:1.2f}'.format(chisquare, dof, rchisquare))
     
+    
+    ###Characterize noise floor.
+    def func(x, floor):
+        return floor+hip23309_hst_smoothed_uvitbinned
+        
+    #sol, covar, infodict, mesg, ier = scipy.optimize.leastsq(func, wavs_uvit_rebinned,HIP23309_FUV['flux'].to_numpy()[inds], 0, HIP23309_FUV['flux_err'].to_numpy()[inds])
+       
     ###Calculate integrated flux in HST, UVIT overlap (1300-1700 A)
-    total_fuv_uvit=np.sum(uvit_wav_deltas_cut*uvit_flux_cut)
-    total_fuv_uvit_err=np.sqrt(np.sum((uvit_wav_deltas_cut*uvit_fluxerr_cut)**2.0))
+    total_fuv_uvit=np.sum(uvit_wav_deltas_cut*HIP23309_FUV['flux'].to_numpy()[inds])
+    total_fuv_uvit_err=np.sqrt(np.sum((uvit_wav_deltas_cut*HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0))
     print('"UVIT 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_uvit, total_fuv_uvit_err))  
 
     
@@ -195,42 +201,10 @@ if compare_hst_uvit_hip23309_data:
     total_fuv_hst_err=np.sqrt(np.sum((0.6*hip_hst['err'].to_numpy()[inds2])**2.0))
     print('"HST 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_hst, total_fuv_hst_err))  
 
-    print("(UVIT-HST)/error: {0:2.2f}".format((total_fuv_uvit-total_fuv_hst)/np.sqrt(total_fuv_uvit_err**2.0+total_fuv_hst_err**2.0)))
-    
-    
-    ###Characterize noise floor.
-
-    floor_est=(total_fuv_uvit-total_fuv_hst)/(1700-1300)
-    
-    #Offset fit. 
-    def functhis(x, floor):
-        return floor+hip23309_hst_smoothed_uvitbinned
-    
-    guess=np.array([floor_est])
-    popt, pcov=scipy.optimize.curve_fit(functhis, uvit_wav_centers_cut, uvit_flux_cut, p0=guess, sigma=uvit_fluxerr_cut, method='lm')
-    print('possible noise floor (erg/s/cm2/A: {0:3.1e}'.format(popt[0]))
-    chisquare2=np.sum((functhis(uvit_wav_centers_cut, popt)-uvit_flux_cut)**2.0/(uvit_fluxerr_cut)**2.0)
-    dof2=len(uvit_flux_cut)-1
-    rchisquare2=chisquare2/dof2  
-    print('"Chi-square w/noise floor": {0:3.1f}, dof:{1:3f} "reduced "chi square" w/noise floor": {2:1.2f}'.format(chisquare2, dof2, rchisquare2))
-    
-    # #linear fit. 
-    # def functhis2(x, floor, slope):
-    #     return floor+hip23309_hst_smoothed_uvitbinned + slope * x
-    
-    # guess=np.array([floor_est, 0.0])
-    # popt2, pcov2=scipy.optimize.curve_fit(functhis2, uvit_wav_centers_cut, uvit_flux_cut, p0=guess, sigma=uvit_fluxerr_cut, method='lm')
-    
-    
-    # chisquare3=np.sum((functhis2(uvit_wav_centers_cut, popt2[0], popt2[1])-uvit_flux_cut)**2.0/(uvit_fluxerr_cut)**2.0)
-    # dof3=len(uvit_wav_centers_cut)-2
-    # rchisquare3=chisquare3/dof3  
-    # print('"Chi-square w/linear term": {0:3.1f}, dof:{1:3f} "reduced "chi square" w/linear term": {2:1.2f}'.format(chisquare3, dof3, rchisquare3))
-    
-    
+    print("(UVIT-HST)/error: {0:2.2f}".format((total_fuv_uvit-total_fuv_hst)/np.sqrt(total_fuv_uvit_err**2.0+total_fuv_hst_err**2.0)))  
     ###Plot
     markersize=3
-        
+    
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
     ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple', marker='o', markersize=markersize, label='HST')
     ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
@@ -246,8 +220,7 @@ if compare_hst_uvit_hip23309_data:
     ax1.set_ylabel('Luminosity (erg/s/A)')
     
     ax2.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple',marker='o', markersize=markersize, label='HST')
-    ax2.errorbar(HIP23309_FUV['lambda'], (HIP23309_FUV['flux'])*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
-    ax2.errorbar(HIP23309_FUV['lambda'], (HIP23309_FUV['flux']-popt[0])*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='grey', marker='o',linestyle='--', markersize=markersize, label='UVIT-offset')
+    ax2.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
     ax2.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=fluxerr_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
     ax2.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
 
