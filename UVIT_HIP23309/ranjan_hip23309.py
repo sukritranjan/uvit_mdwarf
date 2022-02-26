@@ -158,8 +158,25 @@ if compare_hst_uvit_hip23309_data:
     
     hip23309_hst_smoothed=gaussian_filter1d(hip_hst['flux'], 14.63/0.6/2.385 )#FWHM of 14.63, /2.385 to get sigma, each STIS wavelength resolution element is 0.6
 
-    hip23309_hst_smoothed_uvitbinned = cg.downbin_spec(hip23309_hst_smoothed,hip_hst['wavelength'], uvit_wav_centers_cut, dlam=uvit_wav_deltas_cut) #For some reason error-weighting doesn't work
+    # hip23309_hst_smoothed_uvitbinned = cg.downbin_spec(hip23309_hst_smoothed,hip_hst['wavelength'], uvit_wav_centers_cut, dlam=uvit_wav_deltas_cut) #For some reason error-weighting doesn't work
     
+    hip23309_hst_smoothed_uvitbinned, hip23309_hst_smoothed_uvitbinned_err= cg.downbin_spec_err(hip23309_hst_smoothed, hip_hst['err'], hip_hst['wavelength'], uvit_wav_centers_cut, dlam=uvit_wav_deltas_cut) #For some reason error-weighting doesn't work
+
+    
+        
+    # ###What is the error on the HST data between 1300 and 1700 nm?
+    # hst_wavs=hip_hst['wavelength'].to_numpy()
+    # hst_errs=hip_hst['err'].to_numpy()
+    # hst_fluxes=hip_hst['flux'].to_numpy()
+    
+    # hstinds=np.where((hst_wavs>=fuv_min) & (hst_wavs<=fuv_max))
+    
+    # snr=hst_errs[hstinds]/np.abs(hst_fluxes[hstinds])
+    # snr[np.isnan(snr)]=0.0
+    # snr[np.isinf(snr)]=0.0
+    
+    
+    # maxerr=np.max(snr)    
     ###Rebin UVIT data to eliminate negative fluxes
     rebinfactor=4
     num_uvit=len(HIP23309_FUV['lambda'].to_numpy())
@@ -178,7 +195,9 @@ if compare_hst_uvit_hip23309_data:
    ###Calculate "chi-square". Approximate HST data as perfect (no error)
     uvit_flux_cut=HIP23309_FUV['flux'].to_numpy()[inds]
     uvit_fluxerr_cut=HIP23309_FUV['flux_err'].to_numpy()[inds]
-    chisquare=np.sum((hip23309_hst_smoothed_uvitbinned-HIP23309_FUV['flux'].to_numpy()[inds])**2.0/(HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0)
+    # chisquare=np.sum((hip23309_hst_smoothed_uvitbinned-HIP23309_FUV['flux'].to_numpy()[inds])**2.0/(HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0)
+    chisquare=np.sum((hip23309_hst_smoothed_uvitbinned-uvit_flux_cut)**2.0/(uvit_fluxerr_cut**2.0+hip23309_hst_smoothed_uvitbinned_err**2.0))
+
     dof=len(hip23309_hst_smoothed_uvitbinned)
     rchisquare=chisquare/dof
     
@@ -207,9 +226,9 @@ if compare_hst_uvit_hip23309_data:
         return floor+hip23309_hst_smoothed_uvitbinned
     
     guess=np.array([floor_est])
-    popt, pcov=scipy.optimize.curve_fit(functhis, uvit_wav_centers_cut, uvit_flux_cut, p0=guess, sigma=uvit_fluxerr_cut, method='lm')
+    popt, pcov=scipy.optimize.curve_fit(functhis, uvit_wav_centers_cut, uvit_flux_cut, p0=guess, sigma=np.sqrt(uvit_fluxerr_cut**2.0 +hip23309_hst_smoothed_uvitbinned_err**2.0), method='lm')
     print('possible noise floor (erg/s/cm2/A: {0:3.1e}'.format(popt[0]))
-    chisquare2=np.sum((functhis(uvit_wav_centers_cut, popt)-uvit_flux_cut)**2.0/(uvit_fluxerr_cut)**2.0)
+    chisquare2=np.sum((functhis(uvit_wav_centers_cut, popt)-uvit_flux_cut)**2.0/(uvit_fluxerr_cut**2.0+hip23309_hst_smoothed_uvitbinned_err**2.0))
     dof2=len(uvit_flux_cut)-1
     rchisquare2=chisquare2/dof2  
     print('"Chi-square w/noise floor": {0:3.1f}, dof:{1:3f} "reduced "chi square" w/noise floor": {2:1.2f}'.format(chisquare2, dof2, rchisquare2))
@@ -234,14 +253,15 @@ if compare_hst_uvit_hip23309_data:
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
     ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple', marker='o', markersize=markersize, label='HST')
     ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
+    ax1.errorbar(HIP23309_FUV['lambda'], (HIP23309_FUV['flux']-popt[0])*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='grey', marker='o',linestyle='--', markersize=markersize, label='UVIT-offset')
     ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=fluxerr_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
-    ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
+    ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned_err*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
 
    
     
     ax1.set_yscale('linear')
     ax1.set_ylim([-1E27, 4.0E27])
-    ax1.legend(bbox_to_anchor=[-0.02, 1.08, 2., .152], loc=3, ncol=4, borderaxespad=0., fontsize=12)
+    ax1.legend(bbox_to_anchor=[-0.02, 1.08, 1.0, .152], loc=3, ncol=4, borderaxespad=0., fontsize=12)
     ax1.set_xlabel('Wavelength (A)')
     ax1.set_ylabel('Luminosity (erg/s/A)')
     
@@ -249,7 +269,7 @@ if compare_hst_uvit_hip23309_data:
     ax2.errorbar(HIP23309_FUV['lambda'], (HIP23309_FUV['flux'])*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
     ax2.errorbar(HIP23309_FUV['lambda'], (HIP23309_FUV['flux']-popt[0])*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='grey', marker='o',linestyle='--', markersize=markersize, label='UVIT-offset')
     ax2.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=fluxerr_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
-    ax2.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
+    ax2.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned_err*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
 
 
     ax2.set_yscale('log')
@@ -259,7 +279,7 @@ if compare_hst_uvit_hip23309_data:
     ax2.set_xlabel('Wavelength (A)')
     ax2.set_ylabel('Luminosity (erg/s/A)')
     plt.savefig('./Plots/hst_uvit_hip23309_comparison.pdf', orientation='portrait',format='pdf')
-
+    
 #######
 ###Compare Inter-orbit Stability: NUV
 ######
