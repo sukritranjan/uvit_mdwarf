@@ -9,10 +9,15 @@ Created on Thu Feb 17 16:42:13 2022
 ########################
 ###Control switches for plotting
 ########################
-compare_hst_uvit_hip23309_data=True #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309
+compare_hst_uvit_hip23309_data=False #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309
 nuv_inter_orbit_stability=False #Plot stability of UVT NUV measurement orbit-by-orbit?
-compare_hip23309_otherms_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars
-compare_hip23309_otherms_nuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars
+
+compare_hip23309_otherms_luminosity_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in luminosity
+compare_hip23309_otherms_luminosity_nuv=False #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in luminosity
+
+compare_hip23309_otherms_intrinsicflux_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+compare_hip23309_otherms_intrinsicflux_nuv=False #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+
 
 ########################
 ###Import useful libraries
@@ -25,7 +30,6 @@ import pdb
 import scipy.integrate
 from scipy import interpolate as interp
 import coronagraph as cg
-import spectres
 from scipy.ndimage import gaussian_filter1d
 
 
@@ -66,13 +70,17 @@ pc=3.086e18 #1 pc in cm
 #######
 ###Stellar parameters
 #######
-d_hip23309=26.8*pc #Distance ot HIP 23309 in cm; Malo et al. 2014
+d_hip23309=26.8*pc #Distance to HIP 23309 in cm; Malo et al. 2014
+d_gj832=5.0*pc #Distance to gj832 in cm; Youngblood et al. 2016 Table 2
+d_gj667c=6.8*pc #Distance to gj667c in cm; Youngblood et al. 2016 Table 2
+d_hd85512=11.2*pc #Distance to hd85512 in cm; Youngblood et al. 2016 Table 2
+d_hd40307=13.0*pc #Distance to hd85512 in cm; Youngblood et al. 2016 Table 2
 
-d_gj832=4.9*pc #Distance to gj832 in cm; France et al. 2016 Table 1
-d_gj667c=6.9*pc #Distance to gj667c in cm; France et al. 2016 Table 1
-d_hd85512=11.2*pc #Distance to hd85512 in cm; France et al. 2016 Table 1
-d_hd40307=12.9*pc #Distance to hd85512 in cm; France et al. 2016 Table 1
-
+r_hip23309=0.93*R_sun #Radius of HIP 23309 in cm; Malo et al. 2014
+r_gj832=0.46*R_sun #Radius of  gj832 in cm; Youngblood et al. 2016 Table 2
+r_gj667c=0.46*R_sun #Radius of  gj667c in cm; Youngblood et al. 2016 Table 2
+r_hd85512=0.7*R_sun #Radius of  hd85512 in cm; Youngblood et al. 2016 Table 2
+r_hd40307=0.83*R_sun #Radius of  hd85512 in cm; Youngblood et al. 2016 Table 2
 
 #######
 ###MUSCLES Data
@@ -135,9 +143,6 @@ HIP23309_NUV7 = pd.read_csv('./HIP23309_NUV_6463_T01_207T01_9000001720_NUV_Grati
 if compare_hst_uvit_hip23309_data:
     ###Rebin HST data
     
-    # #Functionalize HST data
-    # hip23309_hst_func=interp.interp1d(hip_hst['wavelength'], hip_hst['flux'], kind='linear')
-    
     ##Get abscissa to rebin to.
     #Initialize
     uvit_wav_centers=HIP23309_FUV['lambda'].to_numpy() #centers of all UVIT data.
@@ -160,35 +165,9 @@ if compare_hst_uvit_hip23309_data:
     uvit_wav_centers_cut=uvit_wav_centers[inds]
     uvit_wav_deltas_cut=uvit_wav_right_cut-uvit_wav_left_cut
     
-    # def integrate_hip23309_hst(wav_left, wav_right):
-    #     intflux=np.zeros(np.shape(wav_left))
+    hip23309_hst_smoothed=gaussian_filter1d(hip_hst['flux'], 14.63/0.6/2.385 )#FWHM of 14.63, /2.385 to get sigma, each STIS wavelength resolution element is 0.6
 
-    #     for ind in range(0, len(wav_left)):
-    #         leftedge=wav_left[ind]
-    #         rightedge=wav_right[ind]
-    #         intflux[ind]=scipy.integrate.quad(hip23309_hst_func, leftedge, rightedge, epsabs=0, epsrel=1e-3,limit=500)[0]/(rightedge-leftedge) #units: erg/s/cm2/A
-    	
-    #     return intflux    
-    
-    # #Get UVIT data to compare to.
-    # hip23309_hst_rebinned=integrate_hip23309_hst(uvit_wav_left_cut, uvit_wav_right_cut)
-    
-    hip23309_hst_smoothed=gaussian_filter1d(hip_hst['flux'], 14.63/0.6/2.385 )#FWHM of 13, /2.385 to get sigma, each wavelength resolution element is 0.6
-    
-    # lammin = 1300
-    # lammax = 1700
-    # dl=14.63 #According to latest paper -- Prasanta 2/18/22 email.
-    
-    # wl, dwl = cg.noise_routines.construct_lam(lammin, lammax, dlam = dl)  ## wavelength grid
-
-    hip23309_hst_smoothed_uvitbinned = cg.downbin_spec(hip23309_hst_smoothed,hip_hst['wavelength'], uvit_wav_centers_cut, dlam=uvit_wav_deltas_cut) #For some reason error-weighting doesn't work as well???
-
-    ###Rebin to lower resolution.
-    # hip23309_hst_rebinned, hip23309_hst_rebinned_err = cg.downbin_spec_err(hip_hst['flux'],hip_hst['err'] , hip_hst['wavelength'], wl, dlam=dwl) #For some reason error-weighting doesn't work as well???
-    
-    
-    # hip23309_hst_rebinned = cg.downbin_spec(hip_hst['flux'], hip_hst['wavelength'], wl, dlam=dwl)
-    # hip23309_hst_rebinned_err=0*hip23309_hst_rebinned
+    hip23309_hst_smoothed_uvitbinned = cg.downbin_spec(hip23309_hst_smoothed,hip_hst['wavelength'], uvit_wav_centers_cut, dlam=uvit_wav_deltas_cut) #For some reason error-weighting doesn't work
     
     ###Rebin UVIT data to eliminate negative fluxes
     rebinfactor=4
@@ -206,23 +185,26 @@ if compare_hst_uvit_hip23309_data:
     
    ###Calculate "chi-square". Approximate HST data as perfect (no error)
     chisquare=np.sum((hip23309_hst_smoothed_uvitbinned-HIP23309_FUV['flux'].to_numpy()[inds])**2.0/(HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0)
-    rchisquare=chisquare/len(hip23309_hst_smoothed_uvitbinned)
-    print(chisquare, rchisquare)
+    dof=len(hip23309_hst_smoothed_uvitbinned)
+    rchisquare=chisquare/dof
     
-
+    print('"Chi-square": {0:3.1f}, dof:{1:3f}"reduced "chi square"": {2:1.2f}'.format(chisquare, dof, rchisquare))
    
     ###Calculate integrated flux in HST, UVIT overlap (1300-1700 A)
     total_fuv_uvit=np.sum(uvit_wav_deltas_cut*HIP23309_FUV['flux'].to_numpy()[inds])
     total_fuv_uvit_err=np.sqrt(np.sum((uvit_wav_deltas_cut*HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0))
-    
+    print('"UVIT 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_uvit, total_fuv_uvit_err))  
+
     
     inds2=np.where((hip_hst['wavelength'].to_numpy()>=fuv_min) & (hip_hst['wavelength'].to_numpy()<=fuv_max))
     total_fuv_hst=np.sum(0.6*hip_hst['flux'].to_numpy()[inds2])
     total_fuv_hst_err=np.sqrt(np.sum((0.6*hip_hst['err'].to_numpy()[inds2])**2.0))
-      
+    print('"HST 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_hst, total_fuv_hst_err))  
+
+    print("(UVIT-HST)/error: {0:2.2f}".format((total_fuv_uvit-total_fuv_hst)/np.sqrt(total_fuv_uvit_err**2.0+total_fuv_hst_err**2.0)))  
     ###Plot
     markersize=3
-    
+        
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
     ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple', marker='o', markersize=markersize, label='HST')
     ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
@@ -302,20 +284,32 @@ if nuv_inter_orbit_stability:
     ax2.set_ylabel('Luminosity (erg/s/A)')
     plt.savefig('./Plots/uvit_nuv_orbit_by_orbit.pdf', orientation='portrait',format='pdf')
 
+
+#######################################
+###Intrinsic Flux
+#######################################    
+#Factor to multiply to convert flux at detector to desired quantity
+convert_detected_flux_hip23309=4.0*np.pi*d_hip23309**2.0
+convert_detected_flux_gj832=4.0*np.pi*d_gj832**2.0
+convert_detected_flux_gj667c=4.0*np.pi*d_gj667c**2.0
+convert_detected_flux_hd85512=4.0*np.pi*d_hd85512**2.0
+convert_detected_flux_hd40307=4.0*np.pi*d_hd40307**2.0
+
 #######
 ###Compare against other M-dwarfs: FUV
 ######
+
+
 markersize=3
 
-if compare_hip23309_otherms_fuv:
+if compare_hip23309_otherms_luminosity_fuv:
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
-    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple', label='HIP23309 (FUMES)',marker='o', markersize=markersize)
-    ax1.errorbar(gj832['WAVELENGTH'], gj832['FLUX']*4.0*np.pi*d_gj832**2.0, yerr=gj832['ERROR']*4.0*np.pi*d_gj832**2.0, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
-    ax1.errorbar(gj667c['WAVELENGTH'], gj667c['FLUX']*4.0*np.pi*d_gj667c**2.0, yerr=gj667c['ERROR']*4.0*np.pi*d_gj667c**2.0, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
-    ax1.errorbar(hd85512['WAVELENGTH'], hd85512['FLUX']*4.0*np.pi*d_hd85512**2.0, yerr=hd85512['ERROR']*4.0*np.pi*d_hd85512**2.0, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
-    ax1.errorbar(hd40307['WAVELENGTH'], hd40307['FLUX']*4.0*np.pi*d_hd40307**2.0, yerr=hd40307['ERROR']*4.0*np.pi*d_hd40307**2.0, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
-    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
-    # ax1.errorbar(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_NUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black',marker='o', markersize=markersize)    
+    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*convert_detected_flux_hip23309, yerr=hip_hst['err']*convert_detected_flux_hip23309, color='purple', label='HIP23309 (FUMES)',marker='o', markersize=markersize)
+    ax1.errorbar(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, yerr=gj832['ERROR']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, yerr=gj667c['ERROR']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, yerr=hd85512['ERROR']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, yerr=hd40307['ERROR']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, yerr=HIP23309_FUV['flux_err']*convert_detected_flux_hip23309, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
     
     ax1.set_yscale('linear')
     ax1.set_ylim([-1E27, 4.e27])
@@ -323,34 +317,33 @@ if compare_hip23309_otherms_fuv:
     ax1.set_xlabel('Wavelength (A)')
     ax1.set_ylabel('Luminosity (erg/s/A)')
     
-    ax2.plot(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, color='purple', label='HIP23309 (FUMES)',marker='o', markersize=markersize)
-    ax2.plot(gj832['WAVELENGTH'], gj832['FLUX']*4.0*np.pi*d_gj832**2.0, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*4.0*np.pi*d_gj667c**2.0, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*4.0*np.pi*d_hd85512**2.0, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*4.0*np.pi*d_hd40307**2.0, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
-    # ax2.plot(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*4.0*np.pi*d_hip23309**2.0, color='black',marker='o', markersize=markersize)
+    ax2.plot(hip_hst['wavelength'], hip_hst['flux']*convert_detected_flux_hip23309, color='purple', label='HIP23309 (FUMES)',marker='o', markersize=markersize)
+    ax2.plot(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
     ax2.set_yscale('log')
     ax2.set_ylim([1.e21, 1.e28])
     
     ax2.set_xlim([1200.,1800.])
     ax2.set_xlabel('Wavelength (A)')
     ax2.set_ylabel('Luminosity (erg/s/A)')
-    plt.savefig('./Plots/compare_hip23309_otherstars_fuv.pdf', orientation='portrait',format='pdf')
+    plt.savefig('./Plots/compare_hip23309_otherstars_luminosity_fuv.pdf', orientation='portrait',format='pdf')
 
 
 #######
 ###Compare against other M-dwarfs: NUV
 ######
-if compare_hip23309_otherms_nuv:
+if compare_hip23309_otherms_luminosity_nuv:
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
-    ax1.plot(pineda_hip23309_aumic_wav, pineda_hip23309_aumic_luminosity, color='pink', label='AU-MIC (Pineda)',marker='o', markersize=markersize)
-    ax1.errorbar(gj832['WAVELENGTH'], gj832['FLUX']*4.0*np.pi*d_gj832**2.0, yerr=gj832['ERROR']*4.0*np.pi*d_gj832**2.0, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
-    ax1.errorbar(gj667c['WAVELENGTH'], gj667c['FLUX']*4.0*np.pi*d_gj667c**2.0, yerr=gj667c['ERROR']*4.0*np.pi*d_gj667c**2.0, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
-    ax1.errorbar(hd85512['WAVELENGTH'], hd85512['FLUX']*4.0*np.pi*d_hd85512**2.0, yerr=hd85512['ERROR']*4.0*np.pi*d_hd85512**2.0, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
-    ax1.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*4.0*np.pi*d_hd40307**2.0, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
-    # ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
-    ax1.errorbar(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_NUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black',marker='o', markersize=markersize)   
+    # ax1.plot(pineda_hip23309_aumic_wav, pineda_hip23309_aumic_luminosity, color='pink', label='AU-MIC (Pineda)',marker='o', markersize=markersize)
+    ax1.errorbar(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, yerr=gj832['ERROR']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, yerr=gj667c['ERROR']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, yerr=hd85512['ERROR']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    # ax1.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, yerr=hd40307['ERROR']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*convert_detected_flux_hip23309, yerr=HIP23309_NUV['flux_err']*convert_detected_flux_hip23309, color='black',marker='o', markersize=markersize)   
     
     ax1.set_yscale('linear')
     ax1.set_ylim([-1E27, 3E27])
@@ -358,20 +351,97 @@ if compare_hip23309_otherms_nuv:
     ax1.set_xlabel('Wavelength (A)')
     ax1.set_ylabel('Luminosity (erg/s/A)')
     
-    ax2.plot(pineda_hip23309_aumic_wav, pineda_hip23309_aumic_luminosity, color='pink', label='AU-MIC (Pineda)',marker='o', markersize=markersize)
-    ax2.plot(gj832['WAVELENGTH'], gj832['FLUX']*4.0*np.pi*d_gj832**2.0, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*4.0*np.pi*d_gj667c**2.0, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*4.0*np.pi*d_hd85512**2.0, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
-    ax2.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*4.0*np.pi*d_hd40307**2.0, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
-    # ax2.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
-    ax2.plot(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*4.0*np.pi*d_hip23309**2.0, color='black',marker='o', markersize=markersize)    
+    # ax2.plot(pineda_hip23309_aumic_wav, pineda_hip23309_aumic_luminosity, color='pink', label='AU-MIC (Pineda)',marker='o', markersize=markersize)
+    ax2.plot(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*convert_detected_flux_hip23309, color='black',marker='o', markersize=markersize)    
     ax2.set_yscale('log')
     ax2.set_ylim([3.e21, 3.e27])
     
     ax2.set_xlim([2000.,3000.])
     ax2.set_xlabel('Wavelength (A)')
     ax2.set_ylabel('Luminosity (erg/s/A)')
-    plt.savefig('./Plots/compare_hip23309_otherstars_nuv.pdf', orientation='portrait',format='pdf')
+    plt.savefig('./Plots/compare_hip23309_otherstars_luminosity_nuv.pdf', orientation='portrait',format='pdf')
+    
+    
+#######################################
+###Intrinsic Flux
+#######################################    
+#Factor to multiply to convert flux at detector to desired quantity
+convert_detected_flux_hip23309=4.0*np.pi*d_hip23309**2.0/(4.0*np.pi*r_hip23309**2.0)
+convert_detected_flux_gj832=4.0*np.pi*d_gj832**2.0/(4.0*np.pi*r_gj832**2.0)
+convert_detected_flux_gj667c=4.0*np.pi*d_gj667c**2.0/(4.0*np.pi*r_gj667c**2.0)
+convert_detected_flux_hd85512=4.0*np.pi*d_hd85512**2.0/(4.0*np.pi*r_hd85512**2.0)
+convert_detected_flux_hd40307=4.0*np.pi*d_hd40307**2.0/(4.0*np.pi*r_hd40307**2.0)
+
+#######
+###Compare against other M-dwarfs: FUV
+######
 
 
+markersize=3
 
+if compare_hip23309_otherms_intrinsicflux_fuv:
+    fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
+    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*convert_detected_flux_hip23309, yerr=hip_hst['err']*convert_detected_flux_hip23309, color='purple', label='HIP23309 (FUMES)',marker='o', markersize=markersize)
+    ax1.errorbar(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, yerr=gj832['ERROR']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, yerr=gj667c['ERROR']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, yerr=hd85512['ERROR']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, yerr=hd40307['ERROR']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, yerr=HIP23309_FUV['flux_err']*convert_detected_flux_hip23309, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
+    
+    ax1.set_yscale('linear')
+    ax1.set_ylim([-1E3, 1.e5])
+    ax1.legend(loc=0)
+    ax1.set_xlabel('Wavelength (A)')
+    ax1.set_ylabel('Intrinsic Flux (erg/s/A/cm2)')
+    
+    ax2.plot(hip_hst['wavelength'], hip_hst['flux']*convert_detected_flux_hip23309, color='purple', label='HIP23309 (FUMES)',marker='o', markersize=markersize)
+    ax2.plot(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, color='black', label='HIP23309 (UVIT)',marker='o', markersize=markersize)
+    ax2.set_yscale('log')
+    ax2.set_ylim([1.e-1, 1.e6])
+    
+    ax2.set_xlim([1200.,1800.])
+    ax2.set_xlabel('Wavelength (A)')
+    ax2.set_ylabel('Intrinsic Flux (erg/s/A/cm2)')
+    plt.savefig('./Plots/compare_hip23309_otherstars_intrinsicflux_fuv.pdf', orientation='portrait',format='pdf')
+
+
+#######
+###Compare against other M-dwarfs: NUV
+######
+if compare_hip23309_otherms_intrinsicflux_nuv:
+    fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
+    # ax1.plot(pineda_hip23309_aumic_wav, pineda_hip23309_aumic_luminosity, color='pink', label='AU-MIC (Pineda)',marker='o', markersize=markersize)
+    ax1.errorbar(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, yerr=gj832['ERROR']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, yerr=gj667c['ERROR']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, yerr=hd85512['ERROR']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    # ax1.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, yerr=hd40307['ERROR']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax1.errorbar(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*convert_detected_flux_hip23309, yerr=HIP23309_NUV['flux_err']*convert_detected_flux_hip23309, color='black',marker='o', markersize=markersize)   
+    
+    ax1.set_yscale('linear')
+    ax1.set_ylim([-1E4, 3E5])
+    ax1.legend(loc=0)
+    ax1.set_xlabel('Wavelength (A)')
+    ax1.set_ylabel('Intrinsic Flux (erg/s/A/cm2)')
+    
+    # ax2.plot(pineda_hip23309_aumic_wav, pineda_hip23309_aumic_luminosity, color='pink', label='AU-MIC (Pineda)',marker='o', markersize=markersize)
+    ax2.plot(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, color='red', label='GJ832 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, color='orange', label='GJ667c (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307 (MUSCLES)',marker='o', markersize=markersize)
+    ax2.plot(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*convert_detected_flux_hip23309, color='black',marker='o', markersize=markersize)    
+    ax2.set_yscale('log')
+    ax2.set_ylim([1.e-1, 1.e6])
+    
+    ax2.set_xlim([2000.,3000.])
+    ax2.set_xlabel('Wavelength (A)')
+    ax2.set_ylabel('Intrinsic Flux (erg/s/A/cm2)')
+    plt.savefig('./Plots/compare_hip23309_otherstars_intrinsicflux_nuv.pdf', orientation='portrait',format='pdf')
