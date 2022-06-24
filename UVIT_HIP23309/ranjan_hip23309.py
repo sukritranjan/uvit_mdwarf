@@ -12,12 +12,13 @@ Created on Thu Feb 17 16:42:13 2022
 compare_hst_uvit_hip23309_data=False #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309
 nuv_inter_orbit_stability=False #Plot stability of UVT NUV measurement orbit-by-orbit?
 
-compare_hip23309_otherms_luminosity_fuv=True #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in luminosity
+compare_hip23309_otherms_luminosity_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in luminosity
 compare_hip23309_otherms_luminosity_nuv=False #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in luminosity
 
-compare_hip23309_otherms_intrinsicflux_fuv=True #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+compare_hip23309_otherms_intrinsicflux_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
 compare_hip23309_otherms_intrinsicflux_nuv=False #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
 
+make_hip23309_spectrum=True #Make synthetic spectrum of HIP23309 for use in theoretical models.
 
 ########################
 ###Import useful libraries
@@ -41,6 +42,9 @@ from scipy.ndimage import gaussian_filter1d
 km2m=1.e3 #1 km in m
 km2cm=1.e5 #1 km in cm
 cm2km=1.e-5 #1 cm in km
+nm2cm=1.0E-7 #1 nm in cm
+A2cm=1.0E-8 #1 A in cm
+A2nm=1.0E-1 #1 A in nm
 amu2g=1.66054e-24 #1 amu in g
 bar2atm=0.9869 #1 bar in atm
 Pa2bar=1.e-5 #1 Pascal in bar
@@ -83,6 +87,8 @@ r_gj667c=0.46*R_sun #Radius of  gj667c in cm; Youngblood et al. 2016 Table 2
 r_hd85512=0.7*R_sun #Radius of  hd85512 in cm; Youngblood et al. 2016 Table 2
 r_hd40307=0.83*R_sun #Radius of  hd85512 in cm; Youngblood et al. 2016 Table 2
 r_aumic=0.75*R_sun #Radius of AU Mic in cm; Plavchan+2020 Table 1
+
+T_eff_hip23309=3886.0 #Pineda et al. 2021
 
 #######
 ###MUSCLES Data
@@ -195,7 +201,7 @@ if compare_hst_uvit_hip23309_data:
     ###Calculate integrated flux in HST, UVIT overlap (1300-1700 A)
     total_fuv_uvit=np.sum(uvit_wav_deltas_cut*HIP23309_FUV['flux'].to_numpy()[inds])
     total_fuv_uvit_err=np.sqrt(np.sum((uvit_wav_deltas_cut*HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0))
-    print('"UVIT 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_uvit, total_fuv_uvit_err))  
+    print('UVIT 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_uvit, total_fuv_uvit_err))  
 
     
     inds2=np.where((hip_hst['wavelength'].to_numpy()>=fuv_min) & (hip_hst['wavelength'].to_numpy()<=fuv_max))
@@ -247,6 +253,60 @@ if compare_hst_uvit_hip23309_data:
 ######
 
 if nuv_inter_orbit_stability:
+    
+    ###Calculate flux in NUV orbit-by-orbit
+    #Form abscissa files
+    nuv_uvit_wav_centers=HIP23309_NUV1['lambda'].to_numpy() #centers of all UVIT data.
+    nuv_uvit_wav_left=np.zeros(np.shape(nuv_uvit_wav_centers))
+    nuv_uvit_wav_right=np.zeros(np.shape(nuv_uvit_wav_centers))
+    
+    #Get abscissa
+    nuv_uvit_wav_left[1:]=0.5*(nuv_uvit_wav_centers[0:-1] + nuv_uvit_wav_centers[1:])
+    nuv_uvit_wav_right[:-1]=0.5*(nuv_uvit_wav_centers[0:-1] + nuv_uvit_wav_centers[1:])
+    nuv_uvit_wav_left[0]=nuv_uvit_wav_centers[0]-(nuv_uvit_wav_right[0]-nuv_uvit_wav_centers[0])
+    nuv_uvit_wav_right[-1]=nuv_uvit_wav_centers[-1]+(nuv_uvit_wav_centers[-1]-nuv_uvit_wav_left[-1])
+    
+    nuv_uvit_wav_deltas=nuv_uvit_wav_right-nuv_uvit_wav_left
+    
+    #Downselect
+    nuv_min=2200. # What is citation for this being the reliable range?
+    nuv_max=2900. # What is citation for this being the reliable range?
+    inds=np.where((nuv_uvit_wav_left>=nuv_min) & (nuv_uvit_wav_right<=nuv_max))
+    nuv_data_list=[HIP23309_NUV, HIP23309_NUV1, HIP23309_NUV2, HIP23309_NUV3, HIP23309_NUV4, HIP23309_NUV5, HIP23309_NUV6, HIP23309_NUV7]
+    total_nuv_uvit=np.zeros(len(nuv_data_list))
+    total_nuv_uvit_err=np.zeros(len(nuv_data_list))
+    for ind in range(0, len(nuv_data_list)):
+        nuv_data=nuv_data_list[ind]
+        total_nuv_uvit[ind]=np.sum(nuv_uvit_wav_deltas[inds]*nuv_data['flux'].to_numpy()[inds])
+        total_nuv_uvit_err[ind]=np.sqrt(np.sum((nuv_uvit_wav_deltas[inds]*nuv_data['flux_err'].to_numpy()[inds])**2.0))
+        print('UVIT 220-290 nm flux, {0:1.1f}: {1:1.2e} \pm {2:1.2e}'.format(ind+1, total_nuv_uvit[ind], total_nuv_uvit_err[ind])) 
+    
+    ###Plot flux variation
+    fig0, ax1=plt.subplots(1, figsize=(8,6))
+    orbitnums=np.array([1,2,3,4,5,6,7])
+    ax1.errorbar(orbitnums, total_nuv_uvit[1:], yerr=total_nuv_uvit_err[1:], linestyle='none', markersize=5, color='red', marker='o', capsize=20) #plot orbit-by-orbit.
+    ax1.errorbar(np.mean(orbitnums), total_nuv_uvit[0], yerr=total_nuv_uvit_err[0], linestyle='none', markersize=10, color='black',  marker='s',capsize=220) #plot orbit-by-orbit.
+    ax1.set_xlabel('Orbit')
+    ax1.set_ylabel('Flux (erg/s/A/cm2)')
+    plt.savefig('./Plots/uvit_nuv_orbit_by_orbit_band.pdf', orientation='portrait',format='pdf')
+    
+    print((total_nuv_uvit[-1]-total_nuv_uvit[0])/total_nuv_uvit[-1]) #max degree of variation from median.
+    print((total_nuv_uvit[-1]-total_nuv_uvit[0])/np.sqrt(total_nuv_uvit_err[-1]**2.0 + total_nuv_uvit_err[0]**2.0)) #max degree of variation from median.
+    
+    ###Calculate "reduced chi-squares" to see how well data agree.
+    
+    
+    for ind in range(1, len(nuv_data_list)):
+        nuv_data=nuv_data_list[ind]
+        ###Calculate "chi-square". Approximate HST data as perfect (no error)
+        chisquare=np.sum((nuv_data['flux'].to_numpy()[inds]-HIP23309_NUV['flux'].to_numpy()[inds])**2.0/np.sqrt(nuv_data['flux_err'].to_numpy()[inds]**2.0+HIP23309_NUV['flux_err'].to_numpy()[inds]**2.0)**2.0)
+        dof=len(np.squeeze(inds))
+        rchisquare=chisquare/dof
+         
+        print('"Chi-square": {0:3.1f}, dof:{1:3f}"reduced "chi square"": {2:1.2f}'.format(chisquare, dof, rchisquare))
+    
+    ###Plot spectral variation in orbit-by-orbit flux
+    
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
     
     markersizebyorbit=3
@@ -452,3 +512,22 @@ if compare_hip23309_otherms_intrinsicflux_nuv:
     ax2.set_xlabel('Wavelength (A)')
     ax2.set_ylabel('Intrinsic Flux (erg/s/A/cm2)')
     plt.savefig('./Plots/compare_hip23309_otherstars_intrinsicflux_nuv.pdf', orientation='portrait',format='pdf')
+
+
+if make_hip23309_spectrum:
+    nuv_max=np.ceil(np.max(HIP23309_NUV['lambda'])*A2nm) # max wavelength covered by the actual data, converted to nm. 
+    model_wav=np.arange(100.0, 1001.0, step=1.0) # wavelengths to be filled in by model, in nm
+    
+    #Estimate flux for now assuming blackbody, drawing on eqn 2.43 of Catling & Kasting 2017
+    model_wav_cm=model_wav*nm2cm #convert wavelengths from nm to cm for cgs calculation
+    model_flux=(r_hip23309/d_hip23309)**2.0 * np.pi * (2.0*h*c**2.0/model_wav_cm**5.0)*(1.0/(np.exp(h*c/(model_wav_cm*k*T_eff_hip23309))-1))*A2cm #erg cm**-2 s**-1 cm**-1, converted to erg cm**-2 s**-1 A**-1
+
+    
+    hip23309_spec_wav=np.concatenate((HIP23309_FUV['lambda']*A2nm, HIP23309_NUV['lambda']*A2nm))
+    hip23309_spec_flux=np.concatenate((HIP23309_FUV['flux'], HIP23309_NUV['flux']))
+    fig1, ax=plt.subplots(1, figsize=(8,6))
+
+    ax.plot(hip23309_spec_wav, hip23309_spec_flux, color='black')
+    ax.plot(model_wav, model_flux, color='red')
+    ax.set_yscale('log')
+    ax.set_ylim(bottom=1.0E-16)
