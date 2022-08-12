@@ -1,0 +1,4 @@
+#filter_name,wavelength,flux,flux_err
+GAIA/GAIA3.Gbp,5109.71,3.06895e-13, 2.70991e-15
+GAIA/GAIA3.G,6217.59,4.53770e-13, 1.49705e-15
+GAIA/GAIA3.Grp,7769.02,5.68669e-13, 3.74494e-15

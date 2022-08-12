@@ -9,7 +9,7 @@ Created on Thu Feb 17 16:42:13 2022
 ########################
 ###Control switches for plotting
 ########################
-compare_hst_uvit_hip23309_data=False #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309
+compare_hst_uvit_hip23309_data=True #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309
 nuv_inter_orbit_stability=False #Plot stability of UVT NUV measurement orbit-by-orbit?
 
 compare_hip23309_otherms_luminosity_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in luminosity
@@ -515,6 +515,16 @@ if compare_hip23309_otherms_intrinsicflux_nuv:
 
 
 if make_hip23309_spectrum:
+    ####
+    #Read in GAIA spectrum
+    # gaia_wav, gaia_flux, gaia_flux_err=np.genfromtxt('./LIT_DATA/gaia-vis-spec-hip23309-4764027962957023104.txt', skip_header=5, skip_footer=0, unpack=True, usecols=(0,1,2)) #units: nm, W/m2/nm, W/m2/nm
+    
+    gaia_wav_A, gaia_flux_otherunits=np.genfromtxt('./LIT_DATA/HIP23309_corrected_Gaia_spectra.csv', skip_header=2, skip_footer=0, unpack=True, usecols=(0,1), delimiter=',') #units: A, erg/s/cm2/A
+    gaia_wav=gaia_wav_A*0.1 #convert A to nm
+    gaia_flux=gaia_flux_otherunits*0.01 #convert erg/cm2/A/s to W/m**-1/nm
+
+    ####
+    #Blackbody?
     nuv_max=np.ceil(np.max(HIP23309_NUV['lambda'])*A2nm) # max wavelength covered by the actual data, converted to nm. 
     model_wav=np.arange(100.0, 1001.0, step=1.0) # wavelengths to be filled in by model, in nm
     
@@ -522,12 +532,20 @@ if make_hip23309_spectrum:
     model_wav_cm=model_wav*nm2cm #convert wavelengths from nm to cm for cgs calculation
     model_flux=(r_hip23309/d_hip23309)**2.0 * np.pi * (2.0*h*c**2.0/model_wav_cm**5.0)*(1.0/(np.exp(h*c/(model_wav_cm*k*T_eff_hip23309))-1))*A2cm #erg cm**-2 s**-1 cm**-1, converted to erg cm**-2 s**-1 A**-1
 
-    
-    hip23309_spec_wav=np.concatenate((HIP23309_FUV['lambda']*A2nm, HIP23309_NUV['lambda']*A2nm))
-    hip23309_spec_flux=np.concatenate((HIP23309_FUV['flux'], HIP23309_NUV['flux']))
+    hip23309_spec_wav=np.concatenate((wavs_uvit_rebinned*A2nm, HIP23309_NUV['lambda']*A2nm, gaia_wav))
+    hip23309_spec_flux=np.concatenate((flux_uvit_rebinned*0.01, HIP23309_NUV['flux']*0.01, gaia_flux))
+    #Factor of 0.01 to convert erg s**-1 cm**-2 A**-1 to W m**-2 nm**-1
+
     fig1, ax=plt.subplots(1, figsize=(8,6))
 
     ax.plot(hip23309_spec_wav, hip23309_spec_flux, color='black')
-    ax.plot(model_wav, model_flux, color='red')
+    ax.plot(gaia_wav, gaia_flux, color='red')
+    ax.plot(model_wav, model_flux*0.01, color='blue')
+
     ax.set_yscale('log')
-    ax.set_ylim(bottom=1.0E-16)
+    ax.set_ylim(bottom=1.0E-18)
+    
+    
+    savedata=np.column_stack((hip23309_spec_wav, hip23309_spec_flux))
+    np.savetxt('HIP23309spec.txt', savedata, delimiter='\t', newline='\n', fmt='%3.6f %1.6e') #Print checkfile for reaction rates.
+
