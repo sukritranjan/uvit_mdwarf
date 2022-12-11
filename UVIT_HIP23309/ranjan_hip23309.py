@@ -164,7 +164,7 @@ if compare_hst_uvit_hip23309_data:
     uvit_wav_right[-1]=uvit_wav_centers[-1]+(uvit_wav_centers[-1]-uvit_wav_left[-1])
     
     #Downselect
-    fuv_min=1300. #UVIT FUV not trustworthy below ~1300 A (Prasanta email 2/18/222)
+    fuv_min=1300. #UVIT FUV not trustworthy below ~1300 A (Prasanta email 2/18/2022)
     fuv_max=((hip_hst['wavelength'].to_numpy())[-1]) #Terminate where the HST data runs out. 
     inds=np.where((uvit_wav_left>=fuv_min) & (uvit_wav_right<=fuv_max))
     
@@ -178,7 +178,7 @@ if compare_hst_uvit_hip23309_data:
     hip23309_hst_smoothed_uvitbinned = cg.downbin_spec(hip23309_hst_smoothed,hip_hst['wavelength'], uvit_wav_centers_cut, dlam=uvit_wav_deltas_cut) #For some reason error-weighting doesn't work
     
     ###Rebin UVIT data to eliminate negative fluxes
-    rebinfactor=4
+    rebinfactor=5
     num_uvit=len(HIP23309_FUV['lambda'].to_numpy())
     
     num_uvit_rebinned=int(np.floor(num_uvit/rebinfactor))
@@ -201,34 +201,35 @@ if compare_hst_uvit_hip23309_data:
     ###Calculate integrated flux in HST, UVIT overlap (1300-1700 A)
     total_fuv_uvit=np.sum(uvit_wav_deltas_cut*HIP23309_FUV['flux'].to_numpy()[inds])
     total_fuv_uvit_err=np.sqrt(np.sum((uvit_wav_deltas_cut*HIP23309_FUV['flux_err'].to_numpy()[inds])**2.0))
-    print('UVIT 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_uvit, total_fuv_uvit_err))  
+    print('UVIT {0:1f}-{1:1f} nm flux: {2:1.2e} \pm {3:1.2e}'.format(fuv_min/10, fuv_max/10, total_fuv_uvit, total_fuv_uvit_err))  
 
     
     inds2=np.where((hip_hst['wavelength'].to_numpy()>=fuv_min) & (hip_hst['wavelength'].to_numpy()<=fuv_max))
     total_fuv_hst=np.sum(0.6*hip_hst['flux'].to_numpy()[inds2])
     total_fuv_hst_err=np.sqrt(np.sum((0.6*hip_hst['err'].to_numpy()[inds2])**2.0))
-    print('"HST 130-170 nm flux: {0:1.2e} \pm {1:1.2e}'.format(total_fuv_hst, total_fuv_hst_err))  
+    print('"HST {0:1f}-{1:1f} nm flux: {2:1.2e} \pm {3:1.2e}'.format(fuv_min/10, fuv_max/10, total_fuv_hst, total_fuv_hst_err))  
 
     print("(UVIT-HST)/error: {0:2.2f}".format((total_fuv_uvit-total_fuv_hst)/np.sqrt(total_fuv_uvit_err**2.0+total_fuv_hst_err**2.0)))  
     ###Plot
     markersize=3
         
     fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
-    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple', marker='o', markersize=markersize, label='HST')
-    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
-    ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=fluxerr_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
+    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux'], yerr=hip_hst['err'], color='purple', marker='o', markersize=markersize, label='HST')
+    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux'], yerr=HIP23309_FUV['flux_err'], color='black', marker='o', markersize=markersize, label='UVIT')
+    ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned, yerr=fluxerr_uvit_rebinned, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
 
     # ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
     # ax1.errorbar(wl, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_rebinned_err*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
+    ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
 
    
     
-    ax1.set_yscale('linear')
-    ax1.set_ylim([-1E27, 4.0E27])
+    ax1.set_yscale('log')
+    # ax1.set_ylim([-1E27, 4.0E27])
+    ax1.set_ylim([1.0e-16, 1.0e-13])
     ax1.legend(bbox_to_anchor=[-0.02, 1.08, 2., .152], loc=3, ncol=4, borderaxespad=0., fontsize=12)
     ax1.set_xlabel('Wavelength (A)')
-    ax1.set_ylabel('Luminosity (erg/s/A)')
+    ax1.set_ylabel('Flux (erg/s/cm2/A)')
     
     ax2.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='purple',marker='o', markersize=markersize, label='HST')
     ax2.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
@@ -516,9 +517,6 @@ if compare_hip23309_otherms_intrinsicflux_nuv:
 
 if make_hip23309_spectrum:
     ####
-    #Read in GAIA spectrum
-    # gaia_wav, gaia_flux, gaia_flux_err=np.genfromtxt('./LIT_DATA/gaia-vis-spec-hip23309-4764027962957023104.txt', skip_header=5, skip_footer=0, unpack=True, usecols=(0,1,2)) #units: nm, W/m2/nm, W/m2/nm
-    
     gaia_wav_A, gaia_flux_otherunits=np.genfromtxt('./LIT_DATA/HIP23309_corrected_Gaia_spectra.csv', skip_header=2, skip_footer=0, unpack=True, usecols=(0,1), delimiter=',') #units: A, erg/s/cm2/A
     gaia_wav=gaia_wav_A*0.1 #convert A to nm
     gaia_flux=gaia_flux_otherunits*0.01 #convert erg/cm2/A/s to W/m**-1/nm
@@ -528,17 +526,42 @@ if make_hip23309_spectrum:
     nuv_max=np.ceil(np.max(HIP23309_NUV['lambda'])*A2nm) # max wavelength covered by the actual data, converted to nm. 
     model_wav=np.arange(100.0, 1001.0, step=1.0) # wavelengths to be filled in by model, in nm
     
-    #Estimate flux for now assuming blackbody, drawing on eqn 2.43 of Catling & Kasting 2017
+    #Estimate flux assuming blackbody, drawing on eqn 2.43 of Catling & Kasting 2017
     model_wav_cm=model_wav*nm2cm #convert wavelengths from nm to cm for cgs calculation
     model_flux=(r_hip23309/d_hip23309)**2.0 * np.pi * (2.0*h*c**2.0/model_wav_cm**5.0)*(1.0/(np.exp(h*c/(model_wav_cm*k*T_eff_hip23309))-1))*A2cm #erg cm**-2 s**-1 cm**-1, converted to erg cm**-2 s**-1 A**-1
 
-    hip23309_spec_wav=np.concatenate((wavs_uvit_rebinned*A2nm, HIP23309_NUV['lambda']*A2nm, gaia_wav))
-    hip23309_spec_flux=np.concatenate((flux_uvit_rebinned*0.01, HIP23309_NUV['flux']*0.01, gaia_flux))
+    
+    ####Remove UVIT FUV <130 nm = 1300 A as unreliable.
+    fuv_uvit_inds=np.where((wavs_uvit_rebinned >=1290.0) & (wavs_uvit_rebinned<=1710.0))
+    nuv_uvit_inds=np.where((HIP23309_NUV['lambda']>=2000) & (HIP23309_NUV['lambda']<=2950))
+
+    ####Make and save file for purely UVIT data.
+    hip23309_spec_wav=np.concatenate((wavs_uvit_rebinned[fuv_uvit_inds]*A2nm, HIP23309_NUV['lambda'].to_numpy()[nuv_uvit_inds]*A2nm, gaia_wav))
+    hip23309_spec_flux=np.concatenate((flux_uvit_rebinned[fuv_uvit_inds]*0.01, HIP23309_NUV['flux'].to_numpy()[nuv_uvit_inds]*0.01, gaia_flux))
     #Factor of 0.01 to convert erg s**-1 cm**-2 A**-1 to W m**-2 nm**-1
+    savedata=np.column_stack((hip23309_spec_wav, hip23309_spec_flux))
+    np.savetxt('../uv-prebiochem/Raw_Data/Mdwarf_Spectra/Steady-State/UVIT/HIP23309spec.txt', savedata, delimiter='\t', newline='\n', fmt='%3.6f %1.6e') #Print checkfile for reaction rates.
 
+    ####Make and save file for UVIT+HST Data
+    hip23309_hstextended_spec_wav=np.concatenate((hip_hst['wavelength'].to_numpy()*A2nm, HIP23309_NUV['lambda'].to_numpy()[nuv_uvit_inds]*A2nm, gaia_wav))
+    hip23309_hstextended_spec_flux=np.concatenate((hip_hst['flux'].to_numpy()*0.01, HIP23309_NUV['flux'].to_numpy()[nuv_uvit_inds]*0.01, gaia_flux))
+    #Factor of 0.01 to convert erg s**-1 cm**-2 A**-1 to W m**-2 nm**-1
+    savedata2=np.column_stack((hip23309_hstextended_spec_wav, hip23309_hstextended_spec_flux))
+    np.savetxt('../uv-prebiochem/Raw_Data/Mdwarf_Spectra/Steady-State/UVIT/HIP23309spec_hstextended.txt', savedata2, delimiter='\t', newline='\n', fmt='%3.6f %1.6e') #Print checkfile for reaction rates.
+    
+    ####Make and save file for UVIT data rebinned
+    rebinned_wavs=np.arange(1300.0, 1740.0, step=40.0)
+    uvit_bindownmore = cg.downbin_spec(flux_uvit_rebinned,wavs_uvit_rebinned, rebinned_wavs, dlam=np.ones(np.shape(rebinned_wavs))*40.0) #For some reason error-weighting doesn't work
+
+    hip23309_rebinmore_spec_wav=np.concatenate((rebinned_wavs*A2nm, HIP23309_NUV['lambda'].to_numpy()[nuv_uvit_inds]*A2nm, gaia_wav))
+    hip23309_rebinmore_spec_flux=np.concatenate((uvit_bindownmore*0.01, HIP23309_NUV['flux'].to_numpy()[nuv_uvit_inds]*0.01, gaia_flux))
+    #Factor of 0.01 to convert erg s**-1 cm**-2 A**-1 to W m**-2 nm**-1
+    savedata=np.column_stack((hip23309_rebinmore_spec_wav, hip23309_rebinmore_spec_flux))
+    np.savetxt('../uv-prebiochem/Raw_Data/Mdwarf_Spectra/Steady-State/UVIT/HIP23309spec_rebinned.txt', savedata, delimiter='\t', newline='\n', fmt='%3.6f %1.6e') #Print checkfile for reaction rates.
+    
     fig1, ax=plt.subplots(1, figsize=(8,6))
-
     ax.plot(hip23309_spec_wav, hip23309_spec_flux, color='black')
+    ax.plot(hip23309_hstextended_spec_wav, hip23309_hstextended_spec_flux, color='green', linestyle='--')
     ax.plot(gaia_wav, gaia_flux, color='red')
     ax.plot(model_wav, model_flux*0.01, color='blue')
 
@@ -546,6 +569,5 @@ if make_hip23309_spectrum:
     ax.set_ylim(bottom=1.0E-18)
     
     
-    savedata=np.column_stack((hip23309_spec_wav, hip23309_spec_flux))
-    np.savetxt('HIP23309spec.txt', savedata, delimiter='\t', newline='\n', fmt='%3.6f %1.6e') #Print checkfile for reaction rates.
+
 

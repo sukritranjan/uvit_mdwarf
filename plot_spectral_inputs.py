@@ -27,6 +27,9 @@ solar=np.genfromtxt('./hu-code-sr-uvspectraproject/Data/solar00.txt', skip_heade
 ###Import HIP23309 data
 hip23309=np.genfromtxt('./hu-code-sr-uvspectraproject/Data/hip23309.txt', skip_header=0, skip_footer=0, unpack=False) #wavelength (nm), 1 AU-equivalent flux (Watt m**-2 nm**-1)
 
+hip23309_ext=np.genfromtxt('./hu-code-sr-uvspectraproject/Data/hip23309_ext.txt', skip_header=0, skip_footer=0, unpack=False) #wavelength (nm), 1 AU-equivalent flux (Watt m**-2 nm**-1)
+
+
 ###Import TRAPPIST-1 data
 trappist1=np.genfromtxt('./hu-code-sr-uvspectraproject/Data/trappist-1_00.txt', skip_header=0, skip_footer=0, unpack=False) #wavelength (nm), 1 AU-equivalent flux (Watt m**-2 nm**-1)
 
@@ -43,11 +46,28 @@ hd85512=np.genfromtxt('./hu-code-sr-uvspectraproject/Data/hd85512_00.txt', skip_
 hd40307=np.genfromtxt('./hu-code-sr-uvspectraproject/Data/hd40307.txt', skip_header=0, skip_footer=0, unpack=False) #wavelength (nm), 1 AU-equivalent flux (Watt m**-2 nm**-1)
 
 
+##############
+###Rescale GJ832, HD85512 to match HIP23309
+inds_hip23309=np.where((hip23309[:,0]>=130.0) & (hip23309[:,0]<=170.0))
+inds_gj832=np.where((gj832[:,0]>=130.0) & (gj832[:,0]<=170.0))
+inds_hd85512=np.where((hd85512[:,0]>=130.0) & (hd85512[:,0]<=170.0))
+mean_hip23309_fuv=np.mean(hip23309[:,1][inds_hip23309])
+mean_gj832_fuv=np.mean(gj832[:,1][inds_gj832])
+mean_hd85512_fuv=np.mean(hd85512[:,1][inds_hd85512])
+
+rescaled_gj832=np.copy(gj832)
+rescaled_gj832[:,1]=(mean_hip23309_fuv/mean_gj832_fuv)*gj832[:,1]
+
+rescaled_hd85512=np.copy(hd85512)
+rescaled_hd85512[:,1]=(mean_hip23309_fuv/mean_hd85512_fuv)*hd85512[:,1]
+
 ###Plot to check
 fig, ax=plt.subplots(1, figsize=(8., 6.), sharex=True)
 markersizeval=5.
 
 ax.plot(hip23309[:,0], hip23309[:,1], linewidth=2, linestyle='-', marker='o', markersize=5, color='black', label='HIP23309')
+ax.plot(hip23309_ext[:,0], hip23309_ext[:,1], linewidth=2, linestyle='--', marker='.', markersize=5, color='darkgrey', label='HIP23309-Extended')
+
 ax.plot(solar[:,0], solar[:,1], linewidth=2, linestyle='-', marker='o', markersize=5, color='gold', label='Sun')
 
 ax.plot(trappist1[:,0], trappist1[:,1], linewidth=1, linestyle='-', marker='d', markersize=3, color='darkred', label='TRAPPIST-1')
