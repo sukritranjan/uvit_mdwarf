@@ -95,18 +95,18 @@ ax.plot(rescaled_hd85512[:,0], rescaled_hd85512[:,1], linewidth=1, linestyle='--
 
 
 
-ax.legend(ncol=2, loc='upper left')
+ax.legend(ncol=2, loc='best', fontsize=14)
 ax.set_xscale('linear')
-ax.set_xlabel('Wavelength (nm)')
-ax.set_yscale('log')
-ax.set_ylabel(r'Flux (Watt m$^{-2}$ nm$^{-1}$)')
 #ax.set_ylim([0., 120.])
 
 ax.set_xscale('linear')
-ax.set_xlabel('Wavelength (nm)')
+ax.set_xlabel('Wavelength (nm)', fontsize=16)
 ax.set_xlim([115., 315.])
 ax.set_yscale('log')
 ax.set_ylim([1.0E-6, 1.0E1])
+ax.set_ylabel(r'Flux (Watt m$^{-2}$ nm$^{-1}$)', fontsize=16)
+ax.yaxis.set_tick_params(labelsize=15)
+ax.xaxis.set_tick_params(labelsize=15)
 plt.savefig('./plot_stellarinputs.pdf', orientation='portrait', format='pdf')
 
 
