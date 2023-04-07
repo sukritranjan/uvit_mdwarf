@@ -10,10 +10,10 @@ Created on Thu Feb 17 16:42:13 2022
 ###Control switches for plotting
 ########################
 compare_hst_uvit_hip23309_data=True #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309 #Needs to be true ALWAYS to run other bits...
-nuv_inter_orbit_stability=True #Plot stability of UVT NUV measurement orbit-by-orbit?
+nuv_inter_orbit_stability=False #Plot stability of UVT NUV measurement orbit-by-orbit?
 
-compare_hip23309_otherms_intrinsicflux_fuv=True #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
-compare_hip23309_otherms_intrinsicflux_nuv=True #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+compare_hip23309_otherms_intrinsicflux_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+compare_hip23309_otherms_intrinsicflux_nuv=False #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
 
 make_hip23309_spectrum=False #Make synthetic spectrum of HIP23309 for use in theoretical models.
 
@@ -207,66 +207,43 @@ if compare_hst_uvit_hip23309_data:
     print('"HST {0:1f}-{1:1f} nm flux: {2:1.2e} \pm {3:1.2e}'.format(fuv_min/10, fuv_max/10, total_fuv_hst, total_fuv_hst_err))  
 
     print("(UVIT-HST)/error: {0:2.2f}".format((total_fuv_uvit-total_fuv_hst)/np.sqrt(total_fuv_uvit_err**2.0+total_fuv_hst_err**2.0)))  
+    
     ###Plot
     markersize=3
-        
-    # fig1, (ax1, ax2)=plt.subplots(2, figsize=(8,10), sharex=True)
-    # ax1.errorbar(hip_hst['wavelength'], hip_hst['flux'], yerr=hip_hst['err'], color='cyan', marker='o', markersize=markersize, label='HST')
-    # ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux'], yerr=HIP23309_FUV['flux_err'], color='black', marker='o', markersize=markersize, label='UVIT')
-    # ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned, yerr=fluxerr_uvit_rebinned, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
-
-    # # ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    # # ax1.errorbar(wl, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_rebinned_err*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    # ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-
-   
-    
-    # ax1.set_yscale('log')
-    # # ax1.set_ylim([-1E27, 4.0E27])
-    # ax1.set_ylim([1.0e-16, 1.0e-13])
-    # ax1.legend(bbox_to_anchor=[-0.02, 1.08, 2., .152], loc=3, ncol=4, borderaxespad=0., fontsize=12)
-    # ax1.set_xlabel('Wavelength (A)')
-    # ax1.set_ylabel('Flux (erg/s/cm2/A)')
-    
-    # ax2.errorbar(hip_hst['wavelength'], hip_hst['flux']*4.0*np.pi*d_hip23309**2.0, yerr=hip_hst['err']*4.0*np.pi*d_hip23309**2.0, color='cyan',marker='o', markersize=markersize, label='HST')
-    # ax2.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*4.0*np.pi*d_hip23309**2.0, yerr=HIP23309_FUV['flux_err']*4.0*np.pi*d_hip23309**2.0, color='black', marker='o', markersize=markersize, label='UVIT')
-    # ax2.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=fluxerr_uvit_rebinned*4.0*np.pi*d_hip23309**2.0, color='green', marker='o', markersize=markersize, label='UVIT (binned down)')
-
-    # # ax2.errorbar(uvit_wav_centers_cut, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    # # ax2.errorbar(wl, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_rebinned_err*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    # # ax2.errorbar(hip_hst['wavelength'], hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_rebinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    # ax2.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-
-
-    # ax2.set_yscale('log')
-    # ax2.set_ylim([1.0e25, 1.0e28])
-    
-    # ax2.set_xlim([1300.,1700.])
-    # ax2.set_xlabel('Wavelength (A)')
-    # ax2.set_ylabel('Luminosity (erg/s/A)')
-    # plt.savefig('./Plots/hst_uvit_hip23309_comparison.pdf', orientation='portrait',format='pdf')
-    
-    fig1, ax1=plt.subplots(1, figsize=(8,6), sharex=True)
-    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux'], yerr=hip_hst['err'], color='palevioletred', marker='o', markersize=markersize, label='HST', alpha=0.7)
-    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux'], yerr=HIP23309_FUV['flux_err'], color='black', marker='o', markersize=markersize, label='UVIT')
-    ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned, yerr=fluxerr_uvit_rebinned, color='gray', marker='o', markersize=markersize, zorder=10, label='UVIT (binned down)')
-
-    # ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    # ax1.errorbar(wl, hip23309_hst_rebinned*4.0*np.pi*d_hip23309**2.0, yerr=hip23309_hst_rebinned_err*4.0*np.pi*d_hip23309**2.0, color='blue', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-    ax1.errorbar(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned, yerr=hip23309_hst_smoothed_uvitbinned*0.0, color='darkorange', marker='o', markersize=markersize, label='HST rebinned to UVIT')
-
-   
-    
-    ax1.set_yscale('log')
+            
+    fig1, (ax1,ax2)=plt.subplots(2, figsize=(8,8), sharex=True)
+    ax1.errorbar(hip_hst['wavelength'], hip_hst['flux']*1E14, yerr=hip_hst['err']*1E14, color='palevioletred', marker='o', markersize=markersize, label='HST', alpha=0.7)
+    ax1.errorbar(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*1E14, yerr=HIP23309_FUV['flux_err']*1E14, color='black', marker='o', markersize=markersize, label='UVIT')
+    ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*1E14, yerr=fluxerr_uvit_rebinned*1E14, color='green', marker='o', markersize=markersize, zorder=10, label='UVIT (binned 5x)')
+    ax1.plot(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned*1E14, color='darkorange', marker='o', markersize=markersize, label='HST degraded to UVIT')
+    ax1.set_yscale('linear')
     # ax1.set_ylim([-1E27, 4.0E27])
-    ax1.set_ylim([1.0e-16, 1.0e-13])
+    ax1.set_ylim([-2E-1, 2.0])
     # ax1.legend(bbox_to_anchor=[-0.02, 1.08, 2., .152], loc=3, ncol=4, borderaxespad=0., fontsize=15)
     ax1.legend(loc='best', ncol=2, borderaxespad=0., fontsize=15)
-    ax1.set_ylabel(r'Flux (erg s$^{-1}$ cm$^{-2}$ A$^{-1}$)', fontsize=15)
+    ax1.set_ylabel(r'Flux (10$^{-14}$ erg s$^{-1}$ cm$^{-2}$ A$^{-1}$)', fontsize=15)
     ax1.set_xlim([1300.,1700.])
     ax1.set_xlabel(r'Wavelength ($\AA$)', fontsize=15)
     ax1.yaxis.set_tick_params(labelsize=15)
     ax1.xaxis.set_tick_params(labelsize=15)
+    
+    
+    ax2.plot(hip_hst['wavelength'], hip_hst['flux'], color='palevioletred', marker='o', markersize=markersize, label='HST', alpha=0.7)
+    ax2.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux'], color='black', marker='o', markersize=markersize, label='UVIT')
+    ax2.plot(wavs_uvit_rebinned, flux_uvit_rebinned, color='green', marker='o', markersize=markersize, zorder=10, label='UVIT (binned 5x)')
+    ax2.plot(uvit_wav_centers_cut, hip23309_hst_smoothed_uvitbinned, color='darkorange', marker='o', markersize=markersize, label='HST degraded to UVIT')
+    ax2.set_yscale('log')
+    # ax1.set_ylim([-1E27, 4.0E27])
+    ax2.set_ylim([1.0e-16, 1.0e-13])
+    # ax1.legend(bbox_to_anchor=[-0.02, 1.08, 2., .152], loc=3, ncol=4, borderaxespad=0., fontsize=15)
+    # ax2.legend(loc='best', ncol=2, borderaxespad=0., fontsize=15)
+    ax2.set_ylabel(r'Flux (erg s$^{-1}$ cm$^{-2}$ A$^{-1}$)', fontsize=15)
+    ax2.set_xlim([1300.,1700.])
+    ax2.set_xlabel(r'Wavelength ($\AA$)', fontsize=15)
+    ax2.yaxis.set_tick_params(labelsize=15)
+    ax2.xaxis.set_tick_params(labelsize=15)
+       
+    
     plt.savefig('./Plots/hst_uvit_hip23309_comparison.pdf', orientation='portrait',format='pdf')
 
 #######
@@ -449,14 +426,16 @@ if compare_hip23309_otherms_intrinsicflux_fuv:
     # ax2.set_xlabel('Wavelength (A)')
     # ax2.set_ylabel('Intrinsic Flux (erg/s/A/cm2)')
     # plt.savefig('./Plots/compare_hip23309_otherstars_intrinsicflux_fuv.pdf', orientation='portrait',format='pdf')
-    fig1, ax1=plt.subplots(1, figsize=(8,7), sharex=True)
+    fig1, ax1=plt.subplots(1, figsize=(10,7), sharex=True)
     ax1.plot(gj667c['WAVELENGTH'], gj667c['FLUX']*convert_detected_flux_gj667c, color='red', label='GJ667c',marker='o', markersize=markersize)
     ax1.plot(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, color='orange', label='GJ832',marker='o', markersize=markersize)
     ax1.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512',marker='o', markersize=markersize)
     ax1.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307',marker='o', markersize=markersize)
     ax1.plot(aumic_wav_lowres, aumic_flux_lowres*convert_detected_flux_aumic, color='green', label='AU Mic',marker='o', markersize=markersize)
     ax1.plot(hip_hst['wavelength'], hip_hst['flux']*convert_detected_flux_hip23309, color='purple', label='HIP 23309 (HST)',marker='o', markersize=markersize)
-    ax1.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, color='black', label='HIP 23309 (UVIT)',marker='o', markersize=markersize)
+    # ax1.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, color='black', label='HIP 23309 (UVIT)',marker='o', markersize=markersize)
+    ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*convert_detected_flux_hip23309, yerr=fluxerr_uvit_rebinned, color='black', marker='o', markersize=markersize, zorder=10, label='HIP 23309 (UVIT, binned 5x)')
+
     
 
     
@@ -467,7 +446,7 @@ if compare_hip23309_otherms_intrinsicflux_fuv:
 
     ax1.set_xlabel('Wavelength ($\AA$)', fontsize=20)
     ax1.set_ylabel(r'Flux at Stellar Surface (erg s$^{-1}$ $\AA^{-1}$ cm$^{-2}$)', fontsize=20)
-    ax1.set_xlim([1200.,1800.])
+    ax1.set_xlim([1290.,1710.])
     ax1.yaxis.set_tick_params(labelsize=15)
     ax1.xaxis.set_tick_params(labelsize=15)   
     plt.savefig('./Plots/compare_hip23309_otherstars_intrinsicflux_fuv.pdf', orientation='portrait',format='pdf')
