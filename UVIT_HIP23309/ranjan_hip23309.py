@@ -499,6 +499,31 @@ if compare_hip23309_otherms_intrinsicflux_nuv:
     ax1.yaxis.set_tick_params(labelsize=15)
     ax1.xaxis.set_tick_params(labelsize=15)   
     plt.savefig('./Plots/compare_hip23309_otherstars_intrinsicflux_nuv.pdf', orientation='portrait',format='pdf')
+    
+    def get_median_flux(wavelengths, fluxs):
+        """
+        """
+        inds=np.where((wavelengths>=2450.0) & (wavelengths<=2550.0))
+        median_flux=np.median(fluxs[inds])
+        return median_flux
+    
+    fig1, ax1=plt.subplots(1, figsize=(8,7), sharex=True)
+    ax1.plot(gj667c['WAVELENGTH'], (gj667c['FLUX']/get_median_flux(gj667c['WAVELENGTH'],gj667c['FLUX'])), color='red', label='GJ667c',marker='o', markersize=markersize)
+    ax1.plot(gj832['WAVELENGTH'], (gj832['FLUX']/get_median_flux(gj832['WAVELENGTH'],gj832['FLUX'] )), color='orange', label='GJ832',marker='o', markersize=markersize)
+    ax1.plot(hd85512['WAVELENGTH'], (hd85512['FLUX']/get_median_flux(hd85512['WAVELENGTH'],hd85512['FLUX'])), color='blue', label='HD85512',marker='o', markersize=markersize)
+    ax1.plot(hd40307['WAVELENGTH'], (hd40307['FLUX']/get_median_flux(hd40307['WAVELENGTH'],hd40307['FLUX'])), color='magenta', label='HD40307',marker='o', markersize=markersize)
+    ax1.plot(HIP23309_NUV['lambda'].to_numpy(), (HIP23309_NUV['flux'].to_numpy()/get_median_flux(HIP23309_NUV['lambda'].to_numpy(), HIP23309_NUV['flux'].to_numpy())), color='black',marker='o', markersize=markersize, label='HIP 23309 (UVIT)')      
+    
+    ax1.set_yscale('log')
+    ax1.set_ylim([1E-1, 1E3])
+    ax1.legend(loc='upper left', ncol=2, fontsize=14)
+    # ax1.legend(bbox_to_anchor=[-0.15, 1.03, 2., .152], loc=3, ncol=3, borderaxespad=0., fontsize=15)
+    ax1.set_xlabel('Wavelength ($\AA$)', fontsize=20)
+    ax1.set_ylabel(r'Normalized Flux', fontsize=20)
+    ax1.set_xlim([2000.,3000.])
+    ax1.yaxis.set_tick_params(labelsize=15)
+    ax1.xaxis.set_tick_params(labelsize=15)   
+    plt.savefig('./Plots/compare_hip23309_otherstars_shape_nuv.pdf', orientation='portrait',format='pdf')
 
 
 if make_hip23309_spectrum:
