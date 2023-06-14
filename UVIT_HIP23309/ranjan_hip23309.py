@@ -12,8 +12,8 @@ Created on Thu Feb 17 16:42:13 2022
 compare_hst_uvit_hip23309_data=True #Compare FUV UVIT measurements of HIP 23309 to FUV HST measurements of HIP23309 #Needs to be true ALWAYS to run other bits...
 nuv_inter_orbit_stability=False #Plot stability of UVT NUV measurement orbit-by-orbit?
 
-compare_hip23309_otherms_intrinsicflux_fuv=False #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
-compare_hip23309_otherms_intrinsicflux_nuv=False #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+compare_hip23309_otherms_intrinsicflux_fuv=True #compare FUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
+compare_hip23309_otherms_intrinsicflux_nuv=True #compare NUV UVIT measurements of HIP 23309 to measurements of other stars in intrinsic flux
 
 make_hip23309_spectrum=False #Make synthetic spectrum of HIP23309 for use in theoretical models.
 
@@ -77,6 +77,7 @@ d_gj667c=6.8*pc #Distance to gj667c in cm; Youngblood et al. 2016 Table 2
 d_hd85512=11.2*pc #Distance to hd85512 in cm; Youngblood et al. 2016 Table 2
 d_hd40307=13.0*pc #Distance to hd85512 in cm; Youngblood et al. 2016 Table 2
 d_aumic=9.79*pc #Distance to AU Mic in cm; Plavchan+2020 Table 1
+d_adleo=4.9*pc #Distance to AD Leo in cm; Segura+2005.
 
 r_hip23309=0.93*R_sun #Radius of HIP 23309 in cm; Malo et al. 2014
 r_gj832=0.46*R_sun #Radius of  gj832 in cm; Youngblood et al. 2016 Table 2
@@ -84,6 +85,7 @@ r_gj667c=0.46*R_sun #Radius of  gj667c in cm; Youngblood et al. 2016 Table 2
 r_hd85512=0.7*R_sun #Radius of  hd85512 in cm; Youngblood et al. 2016 Table 2
 r_hd40307=0.83*R_sun #Radius of  hd85512 in cm; Youngblood et al. 2016 Table 2
 r_aumic=0.75*R_sun #Radius of AU Mic in cm; Plavchan+2020 Table 1
+r_adleo=0.42*R_sun #Radius of AD Leo in cm; Kossakowski et al. 2022 Table 1
 
 T_eff_hip23309=3886.0 #Pineda et al. 2021
 
@@ -105,6 +107,15 @@ aumic = fits.getdata('./LIT_DATA/h_hd197481_e140m-1425_020x020_51062_spc.fits',1
 
 aumic_wav_lowres=np.arange(1200, 1701, step=1)
 aumic_flux_lowres, aumic_fluxerr_lowres=cg.downbin_spec_err(aumic['FLUX'][0], aumic['ERROR'][0], aumic['WAVE'][0], aumic_wav_lowres, dlam=np.ones(np.shape(aumic_wav_lowres)))
+
+
+#######
+###AD Leo
+######
+
+adleo_wav_um, adleo_flux_units=np.genfromtxt('./LIT_DATA/adleo_dat.txt', skip_header=175, skip_footer=1,usecols=(0,1), unpack=True) #um, Watt/cm2/um; fluxes are at Earth-star distance
+adleo_wav=adleo_wav_um*1.0E4 #convert um to A
+adleo_flux=adleo_flux_units *1.0E3 #convert Watt/cm2/um to erg/s/cm2/A
 
 #######
 ###FUSE HIP23309 data
@@ -364,13 +375,10 @@ if nuv_inter_orbit_stability:
     ax1.set_yscale('linear')
     ax1.set_ylim([0, 2.0])
     # ax1.legend(bbox_to_anchor=[-0.07, 1.02, 2., .152], loc=3, ncol=4, borderaxespad=0., fontsize=15)
-    ax1.legend(loc='best', ncol=2, borderaxespad=0., fontsize=15)
-    ax1.set_xlabel('Wavelength ($\AA$)', fontsize=20)
-    ax1.set_ylabel(r'Flux (10$^{-14}$ erg s$^{-1}$ cm$^{-2}$ A$^{-1}$)', fontsize=20)
-    
+    ax1.legend(loc='best', ncol=2, borderaxespad=0., fontsize=15)    
     ax1.set_xlim([2200.,2900.])
     ax1.set_xlabel('Wavelength ($\AA$)', fontsize=20)
-    ax1.set_ylabel(r'Flux (erg s$^{-1}$ cm$^{-2}$ A$^{-1}$)', fontsize=20)
+    ax1.set_ylabel(r'Flux (10$^{-14}$ erg s$^{-1}$ cm$^{-2}$ A$^{-1}$)', fontsize=20)
     ax1.yaxis.set_tick_params(labelsize=15)
     ax1.xaxis.set_tick_params(labelsize=15)
     plt.savefig('./Plots/uvit_nuv_orbit_by_orbit.pdf', orientation='portrait',format='pdf')
@@ -387,6 +395,7 @@ convert_detected_flux_gj667c=4.0*np.pi*d_gj667c**2.0/(4.0*np.pi*r_gj667c**2.0)
 convert_detected_flux_hd85512=4.0*np.pi*d_hd85512**2.0/(4.0*np.pi*r_hd85512**2.0)
 convert_detected_flux_hd40307=4.0*np.pi*d_hd40307**2.0/(4.0*np.pi*r_hd40307**2.0)
 convert_detected_flux_aumic=4.0*np.pi*d_aumic**2.0/(4.0*np.pi*r_aumic**2.0)
+convert_detected_flux_adleo=4.0*np.pi*d_adleo**2.0/(4.0*np.pi*r_adleo**2.0)
 
 
 #######
@@ -432,6 +441,8 @@ if compare_hip23309_otherms_intrinsicflux_fuv:
     ax1.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512',marker='o', markersize=markersize)
     ax1.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307',marker='o', markersize=markersize)
     ax1.plot(aumic_wav_lowres, aumic_flux_lowres*convert_detected_flux_aumic, color='green', label='AU Mic',marker='o', markersize=markersize)
+    ax1.plot(adleo_wav, adleo_flux*convert_detected_flux_adleo, color='grey', label='AD Leo',marker='o', markersize=markersize)
+
     ax1.plot(hip_hst['wavelength'], hip_hst['flux']*convert_detected_flux_hip23309, color='purple', label='HIP 23309 (HST)',marker='o', markersize=markersize)
     # ax1.plot(HIP23309_FUV['lambda'], HIP23309_FUV['flux']*convert_detected_flux_hip23309, color='black', label='HIP 23309 (UVIT)',marker='o', markersize=markersize)
     ax1.errorbar(wavs_uvit_rebinned, flux_uvit_rebinned*convert_detected_flux_hip23309, yerr=fluxerr_uvit_rebinned, color='black', marker='o', markersize=markersize, zorder=10, label='HIP 23309 (UVIT, binned 5x)')
@@ -487,6 +498,7 @@ if compare_hip23309_otherms_intrinsicflux_nuv:
     ax1.plot(gj832['WAVELENGTH'], gj832['FLUX']*convert_detected_flux_gj832, color='orange', label='GJ832',marker='o', markersize=markersize)
     ax1.plot(hd85512['WAVELENGTH'], hd85512['FLUX']*convert_detected_flux_hd85512, color='blue', label='HD85512',marker='o', markersize=markersize)
     ax1.plot(hd40307['WAVELENGTH'], hd40307['FLUX']*convert_detected_flux_hd40307, color='magenta', label='HD40307',marker='o', markersize=markersize)
+    ax1.plot(adleo_wav, adleo_flux*convert_detected_flux_adleo, color='grey', label='AD Leo',marker='o', markersize=markersize)
     ax1.plot(HIP23309_NUV['lambda'], HIP23309_NUV['flux']*convert_detected_flux_hip23309, color='black',marker='o', markersize=markersize, label='HIP 23309 (UVIT)')      
     
     ax1.set_yscale('log')
@@ -512,6 +524,8 @@ if compare_hip23309_otherms_intrinsicflux_nuv:
     ax1.plot(gj832['WAVELENGTH'], (gj832['FLUX']/get_median_flux(gj832['WAVELENGTH'],gj832['FLUX'] )), color='orange', label='GJ832',marker='o', markersize=markersize)
     ax1.plot(hd85512['WAVELENGTH'], (hd85512['FLUX']/get_median_flux(hd85512['WAVELENGTH'],hd85512['FLUX'])), color='blue', label='HD85512',marker='o', markersize=markersize)
     ax1.plot(hd40307['WAVELENGTH'], (hd40307['FLUX']/get_median_flux(hd40307['WAVELENGTH'],hd40307['FLUX'])), color='magenta', label='HD40307',marker='o', markersize=markersize)
+    ax1.plot(adleo_wav, (adleo_flux/get_median_flux(adleo_wav,adleo_flux)), color='grey', label='AD Leo',marker='o', markersize=markersize)
+
     ax1.plot(HIP23309_NUV['lambda'].to_numpy(), (HIP23309_NUV['flux'].to_numpy()/get_median_flux(HIP23309_NUV['lambda'].to_numpy(), HIP23309_NUV['flux'].to_numpy())), color='black',marker='o', markersize=markersize, label='HIP 23309 (UVIT)')      
     
     ax1.set_yscale('log')
@@ -575,6 +589,7 @@ if make_hip23309_spectrum:
     ax.plot(hip23309_hstextended_spec_wav, hip23309_hstextended_spec_flux, color='green', linestyle='--')
     ax.plot(gaia_wav, gaia_flux, color='red')
     ax.plot(model_wav, model_flux*0.01, color='blue')
+    ax.set_xlim([200,350])
 
     ax.set_yscale('log')
     ax.set_ylim(bottom=1.0E-18)
